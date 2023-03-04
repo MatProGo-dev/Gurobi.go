@@ -1,5 +1,8 @@
 # Gurobi.go
-This is a simple interface used for translating mathematical programs written in the MatProInterface structures into Gurobi convex optimization problems.
+This is a simple wrapper that goes around the C++ API for Gurobi.
+When this module is installed properly (with `go generate`),
+you can use it to set up Mathematical Programs with or
+without using the [MatProInterface](https://github.com/MatProGo-dev/MatProInterface.go).
 
 ## Installation
 
