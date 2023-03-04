@@ -13,3 +13,13 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Ignore idea files
+.idea/*
+
+# Ignore Logging Files
+testing/*.log
+testing/*.lp
+
+# Ignore Files Created By gen.go
+gurobi/gurobi_passthrough.h
