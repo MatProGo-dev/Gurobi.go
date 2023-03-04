@@ -1,0 +1,21 @@
+package gurobi
+
+// #include <gurobi_passthrough.h>
+import "C"
+
+const DBL_ATTR_OBJ = C.GRB_DBL_ATTR_OBJ
+const INT_ATTR_STATUS = C.GRB_INT_ATTR_STATUS
+const DBL_ATTR_OBJVAL = C.GRB_DBL_ATTR_OBJVAL
+const DBL_ATTR_X = C.GRB_DBL_ATTR_X
+
+const OPTIMAL = C.GRB_OPTIMAL
+const INF_OR_UNBD = C.GRB_INF_OR_UNBD
+
+const BINARY = C.GRB_BINARY
+const INTEGER = C.GRB_INTEGER
+const CONTINUOUS = C.GRB_CONTINUOUS
+
+const INFINITY = 1e100
+
+const MAXIMIZE = C.GRB_MAXIMIZE
+const MINIMIZE = C.GRB_MINIMIZE
