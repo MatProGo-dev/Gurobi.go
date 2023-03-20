@@ -21,8 +21,8 @@
 .idea/*
 
 # Ignore Logging Files
-testing/*.log
-testing/*.lp
+testing/gurobi/*.log
+testing/gurobi/*.lp
 
 # Ignore Files Created By gen.go
 gurobi/gurobi_passthrough.h
