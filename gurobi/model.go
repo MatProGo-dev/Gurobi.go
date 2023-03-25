@@ -1,7 +1,5 @@
 package gurobi
 
-// TODO: Change the names of all instances of Model so that they are exported.
-
 // #include <gurobi_passthrough.h>
 import "C"
 import "errors"
