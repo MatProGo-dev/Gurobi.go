@@ -55,8 +55,14 @@ Description:
 	- lb = Lower Bound
 	- ub = Upper Bound
 	- name = Name of the variable
+	- constrs = Array of constraints in which the variable participates.
+	- columns = Numerical values associated with non-zero values for the new variable?
+				(I think these are coefficients appearing in the linear constraint for this variable)
 
 Links:
+
+	Comes from the C API for Gurobi.
+	Documentation for 9.0: https://www.gurobi.com/documentation/9.0/refman/c_addvar.html
 */
 func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name string, constrs []*Constr, columns []float64) (*Var, error) {
 	if model == nil {

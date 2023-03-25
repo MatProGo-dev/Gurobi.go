@@ -1,8 +1,14 @@
 # Gurobi.go
-This is a simple wrapper that goes around the C++ API for Gurobi.
+This is a simple wrapper that goes around the C API for Gurobi.
 When this module is installed properly (with `go generate`),
 you can use it to set up Mathematical Programs with or
 without using the [MatProInterface](https://github.com/MatProGo-dev/MatProInterface.go).
+
+| ![](images/qp1/scalar-range-optimization1.png) | ![](images/qp1/geogebra-export1-yz-slice.png) |
+|:----------------------------------------------:|:---------------------------------------------:|
+|    Effectively Solve Mathematical Programs     |  Using the Tools of Mathematical Programming  |
+
+The above example will be discussed in more detail in a Wiki or example for this library.
 
 ## Installation
 
@@ -25,7 +31,11 @@ See the `testing` directory for some examples of how to use this.
 
 Works in progress...
 
-
-
 ## LICENSE
 See [LICENSE](LICENSE).
+
+## To-Dos
+
+* [ ] Create Documentation for how to implement QP1 with
+  * [ ] MatProInterface.go
+  * [ ] Gurobi.go
