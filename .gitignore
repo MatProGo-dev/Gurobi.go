@@ -27,3 +27,4 @@ testing/mpgSolver/*.log
 
 # Ignore Files Created By gen.go
 gurobi/gurobi_passthrough.h
+gurobi/cgoHelper.go
