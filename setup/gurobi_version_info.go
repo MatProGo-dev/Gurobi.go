@@ -36,19 +36,19 @@ func CreateGurobiHomeDirectory(versionInfo GurobiVersionInfo) (string, error) {
 		versionInfo.TertiaryVersion,
 	)
 
+	macVersionWhereInstallDirectoryChanges := GurobiVersionInfo{9, 5, 1}
+
 	// Create
 	switch runtime.GOOS {
 	case "darwin":
-		// Decide on if we are on intel processors or apple silicon.
-		switch runtime.GOARCH {
-		case "amd64":
+		// Decide on which installation package is used for Gurobi install.
+		switch {
+		case macVersionWhereInstallDirectoryChanges.GreaterThan(versionInfo):
 			gurobiHome := fmt.Sprintf("%v/mac64", gurobiHome)
 			return gurobiHome, nil
-		case "arm64":
+		default:
 			gurobiHome := fmt.Sprintf("%v/macos_universal2", gurobiHome)
 			return gurobiHome, nil
-		default:
-			return "", fmt.Errorf("There was an error finding the architecture on your mac! What is \"%v\"? Send an issue to the gurobi.go repository.", runtime.GOARCH)
 		}
 	default:
 		return "", fmt.Errorf("The operating system that you are using is not recognized: \"%v\".", runtime.GOOS)
@@ -165,4 +165,29 @@ func FindHighestVersion(gurobiVersionList []GurobiVersionInfo) (GurobiVersionInf
 
 	return highestVersion, nil
 
+}
+
+func (gvi GurobiVersionInfo) GreaterThan(gviComp GurobiVersionInfo) bool {
+	// Constants
+
+	// If gvi has a larger MajorVersion than the other, then
+	// the version is greater than the others.
+	if gvi.MajorVersion > gviComp.MajorVersion {
+		return true
+	}
+
+	if gvi.MajorVersion == gviComp.MinorVersion {
+		if gvi.MinorVersion > gviComp.MinorVersion {
+			return true
+		} // If major versions are the same, but minor version is greater, then version is greater.
+
+		if gvi.MinorVersion == gvi.MinorVersion {
+			if gvi.TertiaryVersion > gvi.TertiaryVersion {
+				return true
+			}
+		}
+	}
+
+	// If everything else is not true, then gvi IS NOT greater than gviComp
+	return false
 }
