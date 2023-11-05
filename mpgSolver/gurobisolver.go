@@ -220,6 +220,17 @@ func (gs *GurobiSolver) AddVariable(varIn optim.Variable) error {
 	return err
 }
 
+func VarTypeToGRBVType(vtype optim.VarType) (int8, error) {
+	switch vtype {
+	case optim.Continuous:
+		return gurobi.CONTINUOUS, nil
+	case optim.Binary:
+		return gurobi.BINARY, nil
+	}
+
+	return gurobi.BINARY, fmt.Errorf("Unexpected mpg variable type for conversion: %v", vtype)
+}
+
 /*
 AddVariables
 Description:
@@ -255,31 +266,34 @@ func (gs *GurobiSolver) AddConstraint(constrIn optim.Constraint) error {
 	}
 
 	// Constants
-	var err error
-
 	switch constrIn.(type) {
 	case optim.ScalarConstraint:
-		// Cast
+		// Cast and simplify
 		constrAsSC, _ := constrIn.(optim.ScalarConstraint)
-		// Identify the variables in the left hand side of this constraint
-		var tempVarSlice []*gurobi.Var
-		for _, tempGoopID := range constrAsSC.LeftHandSide.IDs() {
-			tempGurobiIdx := gs.GoopIDToGurobiIndexMap[tempGoopID]
 
-			// Locate the gurobi variable in the current model that has matching ID
-			for _, tempGurobiVar := range gs.CurrentModel.Variables {
-				if tempGurobiIdx == tempGurobiVar.Index {
-					tempVarSlice = append(tempVarSlice, &tempGurobiVar)
-				}
-			}
+		simplifiedConstr, err := MoveVariablesToLHS(constrAsSC)
+		if err != nil {
+			fmt.Println("1")
+			return err
+		}
+
+		if tf, _ := simplifiedConstr.IsLinear(); !tf {
+			return fmt.Errorf("cannot handle quadratic constraints yet in Gurobi.go; create an issue if you want this feature!")
+		}
+
+		gurobiVarSlice, L, senseOut, C, err := gs.ToGurobiLinearConstraint(simplifiedConstr)
+		if err != nil {
+			fmt.Println("2")
+			return err
+		}
+
+		for ii, v := range gurobiVarSlice {
+			fmt.Printf("var slice post TGLC: slice[%v] = %v\n", ii, v)
 		}
 
 		// Call Gurobi library's AddConstr() function
 		_, err = gs.CurrentModel.AddConstr(
-			tempVarSlice,
-			constrAsSC.LeftHandSide.Coeffs(),
-			int8(constrAsSC.Sense),
-			constrAsSC.RightHandSide.Constant(),
+			gurobiVarSlice, L, senseOut, C,
 			fmt.Sprintf("goop Constraint #%v", len(gs.CurrentModel.Constraints)),
 		)
 		if err != nil {
@@ -296,7 +310,10 @@ func (gs *GurobiSolver) AddConstraint(constrIn optim.Constraint) error {
 		// Extract the Scalar Constraint from Each element of this vector constraint
 		// TODO: Finish logic here so that we can extract scalar constraints from an arbitrary vector constraint.
 		for vecIdx := 0; vecIdx < constrAsVC.LeftHandSide.Len(); vecIdx++ {
-			tempConstr, _ := constrAsVC.AtVec(vecIdx)
+			tempConstr, err := constrAsVC.AtVec(vecIdx)
+			if err != nil {
+				return err
+			}
 
 			err = gs.AddConstraint(tempConstr)
 			if err != nil {
@@ -471,4 +488,108 @@ func (gs *GurobiSolver) DeleteSolver() error {
 	gs.Env.Free()
 
 	return nil
+}
+
+/*
+OptimizeModel
+Description:
+
+	Getting
+*/
+func Solve(model optim.Model) (optim.Solution, GurobiSolver, error) {
+	// Create GurobiSolver
+	solver := NewGurobiSolver(model.Name + "_GurobiSolver")
+
+	// Add Variables
+	err := solver.AddVariables(model.Variables)
+	if err != nil {
+		return optim.Solution{},
+			*solver,
+			fmt.Errorf("error adding MPG variables to gurobi model: %v", err)
+	}
+
+	// Add Constraints
+	for i, constraint := range model.Constraints {
+		err = solver.AddConstraint(constraint)
+		if err != nil {
+			return optim.Solution{},
+				*solver,
+				fmt.Errorf(
+					"there was an issue adding %v-th constraint: %v",
+					i, constraint,
+				)
+		}
+	}
+
+	// Add Objective
+	err = solver.SetObjective(*model.Obj)
+	if err != nil {
+		return optim.Solution{},
+			*solver,
+			fmt.Errorf(
+				"there was an issue adding the model's objective: %v", err,
+			)
+	}
+
+	// Call Solver
+	sol, err := solver.Optimize()
+	if err != nil {
+		return optim.Solution{},
+			*solver,
+			fmt.Errorf(
+				"there was an issue with optimizing the model: %v",
+				err,
+			)
+	}
+
+	// Return final solution
+	return sol, *solver, err
+
+}
+
+func (gs *GurobiSolver) ToGurobiLinearConstraint(constr optim.ScalarConstraint) (
+	[]*gurobi.Var, []float64, int8, float64, error,
+) {
+	// constr
+	constrSimplified, err := constr.Simplify()
+	if err != nil {
+		return nil, nil, int8(-1), -1, err
+	}
+
+	// RightHandSide now contains just a constant
+
+	// Algorithm
+	switch left := constrSimplified.LeftHandSide.(type) {
+	case optim.Variable:
+		copiedConstr := constrSimplified
+		copiedConstr.LeftHandSide = left.ToScalarLinearExpression()
+		return gs.ToGurobiLinearConstraint(copiedConstr)
+	case optim.ScalarLinearExpr:
+		// Create slice of gurobi.Var objects that matches whats in expr
+		tempVarSlice := make([]*gurobi.Var, left.X.Len())
+		newL := make([]float64, left.L.Len())
+		for GoopIdx, tempGoopID := range left.IDs() {
+			tempGurobiIdx := gs.GoopIDToGurobiIndexMap[tempGoopID]
+
+			fmt.Printf("Gurobi Index: %v, MPG Index: %v\n", tempGurobiIdx, tempGoopID)
+
+			// Locate the gurobi variable in the current model that has matching ID
+			for jj, tempGurobiVar := range gs.CurrentModel.Variables {
+				if tempGurobiIdx == tempGurobiVar.Index {
+					tempVarSlice[GoopIdx] = &gs.CurrentModel.Variables[jj]
+					newL[GoopIdx] = left.L.AtVec(GoopIdx)
+				}
+			}
+		}
+
+		fmt.Printf(" POST tempVarSlice[0].ID: %v\n", tempVarSlice[0].Index)
+
+		// Return
+		return tempVarSlice, newL, int8(constrSimplified.Sense), float64(constrSimplified.Right().(optim.K)) - left.C, nil
+
+	default:
+		return nil, nil, int8(-1), -1, fmt.Errorf("unexpected left hand side input of type %T", left)
+
+	}
+
 }

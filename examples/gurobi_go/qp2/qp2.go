@@ -1,22 +1,22 @@
-package gurobi_test
+package main
 
 import (
 	"fmt"
-	"testing"
 
-	"github.com/MatProGo-dev/Gurobi.go/gurobi"
+	gurobi "github.com/MatProGo-dev/Gurobi.go/gurobi"
 )
 
-func TestQP1(t *testing.T) {
+func main() {
 	// Create environment.
-	env, err := gurobi.NewEnv("qp1.log")
+	exampleName := "qp2"
+	env, err := gurobi.NewEnv(exampleName + ".log")
 	if err != nil {
 		panic(err.Error())
 	}
 	defer env.Free()
 
 	// Create an empty model.
-	model, err := gurobi.NewModel("qp1", env)
+	model, err := gurobi.NewModel(exampleName+".model", env)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -31,7 +31,7 @@ func TestQP1(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	z, err := model.AddVar(gurobi.CONTINUOUS, 0.0, 0.0, gurobi.INFINITY, "z", []*gurobi.Constr{}, []float64{})
+	z, err := model.AddVar(gurobi.CONTINUOUS, 0.0, 0.0, gurobi.INFINITY, "x", []*gurobi.Constr{}, []float64{})
 	if err != nil {
 		panic(err.Error())
 	}

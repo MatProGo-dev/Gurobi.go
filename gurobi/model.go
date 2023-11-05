@@ -2,7 +2,10 @@ package gurobi
 
 // #include <gurobi_passthrough.h>
 import "C"
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Model ...
 // Gurobi model object
@@ -219,7 +222,14 @@ func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float6
 		pval = (*C.double)(&val[0])
 	}
 
-	err := C.GRBaddconstr(model.AsGRBModel, C.int(len(ind)), pind, pval, C.char(sense), C.double(rhs), C.CString(constrname))
+	fmt.Printf("pind = %v\n", *pind)
+	fmt.Printf("ind = %v\n vars[0] = %v\n", ind, vars[0].Index)
+
+	err := C.GRBaddconstr(
+		model.AsGRBModel,
+		C.int(len(ind)),
+		pind, pval,
+		C.char(sense), C.double(rhs), C.CString(constrname))
 	if err != 0 {
 		return nil, model.makeError(err)
 	}
