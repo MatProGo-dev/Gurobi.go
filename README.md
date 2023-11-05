@@ -145,14 +145,15 @@ To illustrate how to use each, we solve the QP above using each option.
   )
   
   func main() {
-  // Constants
-  exampleName := "matprointerface-qp1"
-  // Create environment.
-  env, err := gurobi.NewEnv(exampleName + ".log")
-  if err != nil {
-  panic(err.Error())
-  }
-  defer env.Free()
+      // Constants
+      exampleName := "matprointerface-qp1"
+      
+      // Create environment.
+      env, err := gurobi.NewEnv(exampleName + ".log")
+      if err != nil {
+          panic(err.Error())
+      }
+      defer env.Free()
   
       // Create an empty model.
       model := optim.NewModel(exampleName + ".model")
