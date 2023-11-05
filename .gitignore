@@ -25,6 +25,9 @@ testing/gurobi/*.log
 testing/gurobi/*.lp
 testing/mpgSolver/*.log
 
+*.log
+*.lp
+
 # Ignore Files Created By gen.go
 gurobi/gurobi_passthrough.h
 gurobi/cgoHelper.go
