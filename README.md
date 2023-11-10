@@ -1,3 +1,4 @@
+[![codecov](https://codecov.io/gh/MatProGo-dev/Gurobi.go/graph/badge.svg?token=PLWY38PGZA)](https://codecov.io/gh/MatProGo-dev/Gurobi.go)
 # Gurobi.go
 This is a simple wrapper that goes around the C API for Gurobi.
 When this module is installed properly (with `go generate`),
