@@ -31,3 +31,7 @@ testing/mpgSolver/*.log
 # Ignore Files Created By gen.go
 gurobi/gurobi_passthrough.h
 gurobi/cgoHelper.go
+
+# Ignore codecov hidden files
+scripts/codecov_upload/*.txt
+scripts/codecov_upload/*.out
