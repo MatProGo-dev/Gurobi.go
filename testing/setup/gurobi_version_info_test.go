@@ -2,6 +2,7 @@ package test_setup
 
 import (
 	"github.com/MatProGo-dev/Gurobi.go/setup"
+	"strings"
 	"testing"
 )
 
@@ -67,4 +68,36 @@ func TestGurobiVersionInfo_StringsToGurobiVersionInfoList2(t *testing.T) {
 		t.Errorf("Expected tertiary version for %v to be 2; received %v", gurobiDirectories[0], vi1.TertiaryVersion)
 	}
 
+}
+
+/*
+TestGurobiVersionInfo_CreateGurobiHomeDirectory1
+Description:
+
+	Testing whether or not the proper string is produced for version
+	11.0.0 of Gurobi (newest as of Nov. 10, 2023).
+*/
+func TestGurobiVersionInfo_CreateGurobiHomeDirectory1(t *testing.T) {
+	// Constants
+	gv0 := setup.GurobiVersionInfo{MajorVersion: 11}
+
+	// Get home directory string for Mac
+	homeDirString, err := setup.CreateGurobiHomeDirectory(gv0)
+	if err != nil {
+		t.Errorf("unexpected error creating home directory: %v", err)
+	}
+
+	if !strings.Contains(
+		homeDirString,
+		"Library",
+	) {
+		t.Errorf("expected gurobi home to be in Library directory, it was not.")
+	}
+
+	if !strings.Contains(
+		homeDirString,
+		"gurobi1100",
+	) {
+		t.Errorf("expected gurobi home to be in \"gurobi11000\" directory, it was not.")
+	}
 }
