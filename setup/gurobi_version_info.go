@@ -140,26 +140,8 @@ func FindHighestVersion(gurobiVersionList []GurobiVersionInfo) (GurobiVersionInf
 	}
 
 	for _, gvi := range gurobiVersionList {
-		// Compare Major version numbers
-		if gvi.MajorVersion > highestVersion.MajorVersion {
+		if gvi.GreaterThan(highestVersion) {
 			highestVersion = gvi
-			continue
-		}
-
-		if gvi.MajorVersion == highestVersion.MajorVersion {
-			// Compare minor version numbers
-			if gvi.MinorVersion > highestVersion.MinorVersion {
-				highestVersion = gvi
-				continue
-			}
-
-			if gvi.MinorVersion == highestVersion.MinorVersion {
-				// Compare tertiary version numbers
-				if gvi.TertiaryVersion > highestVersion.TertiaryVersion {
-					highestVersion = gvi
-					continue
-				}
-			}
 		}
 	}
 
@@ -176,13 +158,13 @@ func (gvi GurobiVersionInfo) GreaterThan(gviComp GurobiVersionInfo) bool {
 		return true
 	}
 
-	if gvi.MajorVersion == gviComp.MinorVersion {
+	if gvi.MajorVersion == gviComp.MajorVersion {
 		if gvi.MinorVersion > gviComp.MinorVersion {
 			return true
 		} // If major versions are the same, but minor version is greater, then version is greater.
 
-		if gvi.MinorVersion == gvi.MinorVersion {
-			if gvi.TertiaryVersion > gvi.TertiaryVersion {
+		if gvi.MinorVersion == gviComp.MinorVersion {
+			if gvi.TertiaryVersion > gviComp.TertiaryVersion {
 				return true
 			}
 		}
