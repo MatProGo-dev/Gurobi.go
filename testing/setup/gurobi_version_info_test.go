@@ -103,6 +103,37 @@ func TestGurobiVersionInfo_StringToGurobiVersionInfoList3(t *testing.T) {
 }
 
 /*
+TestGurobiVersionInfo_StringsToGurobiVersionInfoList4
+Description:
+
+	Tests that the StringToGurobiVersionInfo() function throws an error when a bad major version
+	was given.
+*/
+func TestGurobiVersionInfo_StringToGurobiVersionInfoList4(t *testing.T) {
+	// Constants
+
+	// Collect gurobi version info list
+
+	// Search through Mac Library for all instances of Gurobi
+	gurobiDirectory0 := "gurobic80"
+
+	// Try to parse each of these directories
+	_, err := setup.StringToGurobiVersionInfo(gurobiDirectory0)
+	if err == nil {
+		t.Errorf("no error was thrown, but we expected one to!")
+	} else {
+		_, err2 := strconv.Atoi("c")
+		if !strings.Contains(
+			err.Error(),
+			err2.Error(),
+		) {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+
+}
+
+/*
 TestGurobiVersionInfo_CreateGurobiHomeDirectory1
 Description:
 
@@ -348,5 +379,22 @@ func TestGurobiVersionInfo_FindHighestVersion3(t *testing.T) {
 			gviOut.TertiaryVersion,
 			gviSlice0[0].TertiaryVersion,
 		)
+	}
+}
+
+/*
+TestGurobiVersionInfo_GreaterThan1
+Description:
+
+	Added a simple test for applying Greater Than to two GurobiVersionInfo objects
+*/
+func TestGurobiVersionInfo_GreaterThan1(t *testing.T) {
+	// Constants
+	gvi1 := setup.GurobiVersionInfo{9, 1, 0}
+	gvi2 := setup.GurobiVersionInfo{11, 0, 0}
+
+	// Test
+	if !gvi2.GreaterThan(gvi1) {
+		t.Errorf("algorithm thinks that gvi2 IS NOT greater than gvi1. Why?")
 	}
 }
