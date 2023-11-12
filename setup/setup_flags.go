@@ -102,7 +102,7 @@ func ParseMakeLibArguments(sfIn SetupFlags) (SetupFlags, error) {
 			sfOut.PackageName = os.Args[argIndex+1]
 			argIndex += 2
 		default:
-			fmt.Printf("Unrecognized input: %v", os.Args[argIndex])
+			fmt.Printf("Unrecognized input: %v\n", os.Args[argIndex])
 			argIndex++
 		}
 
