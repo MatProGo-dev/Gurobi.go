@@ -171,6 +171,9 @@ func CreateLDFlagsDirective(sf SetupFlags) (string, error) {
 func (mlf *SetupFlags) ToGurobiVersionInfo() (GurobiVersionInfo, error) {
 	// Split the GurobiHome variable by the name gurobi
 	GurobiWordIndexStart := strings.Index(mlf.GurobiHome, "gurobi")
+	if GurobiWordIndexStart == -1 {
+		return GurobiVersionInfo{}, fmt.Errorf("\"gurobi\" is not found in the setup flag's GurobiHome!")
+	}
 
 	GurobiHomeNameWithoutStart := mlf.GurobiHome[GurobiWordIndexStart:]
 	GurobiDirNameIndexEnd := strings.Index(GurobiHomeNameWithoutStart, "/")
