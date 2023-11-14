@@ -70,7 +70,13 @@ func TestGurobiSolver_AddConstraint1(t *testing.T) {
 		t.Errorf("There was an issue creating the proper vector constraint: %v", err)
 	}
 
-	// Algorithm
+	// Add variables to
+	err = gs.AddVariables(vv1.Elements)
+	if err != nil {
+		t.Errorf("unexpected issue adding variables to gurobi solver's model: %v", err)
+	}
+
+	// Test Adding Constraints
 	err = gs.AddConstraint(vc1)
 	if err != nil {
 		t.Errorf("There was an issue adding the vector constraint to the model: %v", err)
