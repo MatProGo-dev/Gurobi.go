@@ -5,16 +5,16 @@ import "C"
 import "errors"
 
 type Error struct {
-	errcode int32
-	message string
+	ErrorCode int32
+	Message   string
 }
 
 func (err Error) Error() string {
-	return err.message
+	return err.Message
 }
 
 // make an error object from error code.
-func (env *Env) makeError(errcode C.int) error {
+func (env *Env) MakeError(errcode C.int) error {
 	if env == nil {
 		return errors.New("This environment has not initialized yet.")
 	}
@@ -26,6 +26,6 @@ func (env *Env) makeError(errcode C.int) error {
 	return nil
 }
 
-func (model *Model) makeError(errcode C.int) error {
-	return model.Env.makeError(errcode)
+func (model *Model) MakeError(errcode C.int) error {
+	return model.Env.MakeError(errcode)
 }

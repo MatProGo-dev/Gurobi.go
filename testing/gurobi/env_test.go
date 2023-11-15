@@ -1,6 +1,9 @@
-package gurobi
+package gurobi_test
 
-import "testing"
+import (
+	"github.com/MatProGo-dev/Gurobi.go/gurobi"
+	"testing"
+)
 
 /*
 TestEnv_NewEnv1
@@ -13,7 +16,7 @@ func TestEnv_NewEnv1(t *testing.T) {
 	logfilename1 := "thomTide.log"
 
 	// Algorithm
-	env, err := NewEnv(logfilename1)
+	env, err := gurobi.NewEnv(logfilename1)
 	if err != nil {
 		t.Errorf("There was an issue creating the new Env variable: %v", err)
 	}
@@ -33,7 +36,7 @@ func TestEnv_SetTimeLimit1(t *testing.T) {
 	var newTimeLimit float64 = 132
 
 	// Algorithm
-	env, err := NewEnv(logfilename1)
+	env, err := gurobi.NewEnv(logfilename1)
 	if err != nil {
 		t.Errorf("There was an issue creating the new Env variable: %v", err)
 	}
@@ -67,7 +70,7 @@ func TestEnv_SetDBLParam1(t *testing.T) {
 	var newTimeLimit float64 = 132
 
 	// Algorithm
-	env, err := NewEnv(logfilename1)
+	env, err := gurobi.NewEnv(logfilename1)
 	if err != nil {
 		t.Errorf("There was an issue creating the new Env variable: %v", err)
 	}
@@ -102,7 +105,7 @@ func TestEnv_SetDBLParam2(t *testing.T) {
 	var paramToModify string = "BestObjStop"
 
 	// Algorithm
-	env, err := NewEnv(logfilename1)
+	env, err := gurobi.NewEnv(logfilename1)
 	if err != nil {
 		t.Errorf("There was an issue creating the new Env variable: %v", err)
 	}
