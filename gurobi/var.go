@@ -1,5 +1,13 @@
 package gurobi
 
+/*
+var.go
+Description:
+	A set of functions for manipulating the gurobi Var object.
+Notes:
+	The available attributes for variables is listed on Gurobi's website at links like:
+	https://www.gurobi.com/documentation/current/refman/attributes.html
+*/
 // Gurobi variable object
 type Var struct {
 	Model *Model
