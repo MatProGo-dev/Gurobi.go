@@ -158,3 +158,18 @@ func IsValidDBLParam(paramName string) bool {
 
 	return paramNameIsValid
 }
+
+/*
+Check
+Description:
+
+	Checks whether or not the given environment is well-formed.
+*/
+func (env *Env) Check() error {
+	if env == nil {
+		return env.MakeUninitializedError()
+	}
+
+	// If all checks passed, return nil
+	return nil
+}

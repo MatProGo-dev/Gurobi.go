@@ -126,3 +126,47 @@ func TestEnv_SetDBLParam2(t *testing.T) {
 	}
 
 }
+
+/*
+TestEnv_Check1
+Description:
+
+	Verifies that the method returns an error when the env is uninitialized.
+*/
+func TestEnv_Check1(t *testing.T) {
+	// Constants
+	var env0 *gurobi.Env
+
+	// Check
+	err := env0.Check()
+	if err == nil {
+		t.Errorf("an error should have been thrown, but none were detected!")
+	} else {
+		if err.Error() != env0.MakeUninitializedError().Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+
+}
+
+/*
+TestEnv_Check2
+Description:
+
+	Verifies that the method returns no error when the env is
+	properly initialized.
+*/
+func TestEnv_Check2(t *testing.T) {
+	// Constants
+	env0, err := gurobi.NewEnv("testenv-check2.log")
+	if err != nil {
+		t.Errorf("error creating test environment: %v", err)
+	}
+
+	// Check
+	err = env0.Check()
+	if err != nil {
+		t.Errorf("unexpected error during Check(): %v", err)
+	}
+
+}

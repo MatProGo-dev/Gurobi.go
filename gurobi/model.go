@@ -16,11 +16,22 @@ type Model struct {
 	Constraints []Constr
 }
 
+/*
+MakeUninitializedError
+Description:
+
+	This function simply returns a fixed error for when the model is not initialized.
+*/
+func (model *Model) MakeUninitializedError() error {
+	return fmt.Errorf("The gurobi model was not yet initialized!")
+}
+
 // NewModel ...
 // create a new model from the environment.
 func NewModel(modelname string, env *Env) (*Model, error) {
-	if env == nil {
-		return nil, errors.New("This environment is not created yet.")
+	err := env.Check()
+	if err != nil {
+		return nil, env.MakeUninitializedError()
 	}
 
 	var model *C.GRBmodel

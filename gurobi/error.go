@@ -40,13 +40,3 @@ func (env *Env) MakeUninitializedError() error {
 func (model *Model) MakeError(errcode C.int) error {
 	return model.Env.MakeError(errcode)
 }
-
-/*
-MakeUninitializedError
-Description:
-
-	This function simply returns a fixed error for when the model is not initialized.
-*/
-func (model *Model) MakeUninitializedError() error {
-	return fmt.Errorf("The gurobi model was not yet initialized!")
-}
