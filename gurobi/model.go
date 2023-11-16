@@ -26,6 +26,28 @@ func (model *Model) MakeUninitializedError() error {
 	return fmt.Errorf("The gurobi model was not yet initialized!")
 }
 
+/*
+Check
+Description:
+
+	Checks that the model has been properly created.
+*/
+func (model *Model) Check() error {
+	// Check to see if pointer is nil
+	if model == nil {
+		return model.MakeUninitializedError()
+	}
+
+	// Check on env component
+	err := model.Env.Check()
+	if err != nil {
+		return err
+	}
+
+	// If no other checks were flagged, then return nil.
+	return nil
+}
+
 // NewModel ...
 // create a new model from the environment.
 func NewModel(modelname string, env *Env) (*Model, error) {
@@ -77,8 +99,9 @@ Links:
 	Documentation for 9.0: https://www.gurobi.com/documentation/9.0/refman/c_addvar.html
 */
 func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name string, constrs []*Constr, columns []float64) (*Var, error) {
-	if model == nil {
-		return nil, errors.New("model is not initialized")
+	err := model.Check()
+	if err != nil {
+		return nil, err
 	}
 
 	if len(constrs) != len(columns) {
@@ -100,14 +123,16 @@ func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name
 		pval = (*C.double)(&columns[0])
 	}
 
-	err := C.GRBaddvar(model.AsGRBModel, C.int(len(constrs)), pind, pval, C.double(obj), C.double(lb), C.double(ub), C.char(vtype), C.CString(name))
-	if err != 0 {
-		return nil, model.MakeError(err)
+	errCode := C.GRBaddvar(model.AsGRBModel, C.int(len(constrs)), pind, pval, C.double(obj), C.double(lb), C.double(ub), C.char(vtype), C.CString(name))
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("dummy-2")
 
 	model.Variables = append(model.Variables, Var{model, int32(len(model.Variables))})
 	return &model.Variables[len(model.Variables)-1], nil
