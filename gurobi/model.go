@@ -582,7 +582,7 @@ func (model *Model) SetDoubleAttrVars(attrname string, vars []*Var, value []floa
 
 func (model *Model) getIntAttrElement(attr string, ind int32) (int32, error) {
 	if model == nil {
-		return 0.0, errors.New("")
+		return 0.0, model.MakeUninitializedError()
 	}
 	var value int32
 	err := C.GRBgetintattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), (*C.int)(&value))
