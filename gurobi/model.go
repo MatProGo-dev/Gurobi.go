@@ -138,14 +138,17 @@ func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name
 	return &model.Variables[len(model.Variables)-1], nil
 }
 
-// AddVars ...
-func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []float64, name []string, constrs [][]*Constr, columns [][]float64) ([]*Var, error) {
-	if model == nil {
-		return nil, errors.New("")
-	}
+/*
+AddVars
+Description:
 
-	if len(vtype) != len(obj) || len(obj) != len(lb) || len(lb) != len(ub) || len(ub) != len(name) || len(name) != len(constrs) || len(constrs) != len(columns) {
-		return nil, errors.New("")
+	Adds the list of variables defined by the input slices.
+*/
+func (model *Model) AddVars(vtypes []int8, objs []float64, lbs []float64, ubs []float64, names []string, constrs [][]*Constr, columns [][]float64) ([]*Var, error) {
+	// Input Processing
+	err := model.AddVars_InputChecking(vtypes, objs, lbs, ubs, names, constrs, columns)
+	if err != nil {
+		return nil, err
 	}
 
 	numnz := 0
@@ -175,9 +178,9 @@ func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []floa
 		k += len(constrs[i])
 	}
 
-	vname := make([](*C.char), len(vtype))
-	for i, n := range name {
-		vname[i] = C.CString(n)
+	vnames := make([](*C.char), len(vtypes))
+	for i, n := range names {
+		vnames[i] = C.CString(n)
 	}
 
 	pbeg := (*C.int)(nil)
@@ -189,35 +192,107 @@ func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []floa
 		pval = (*C.double)(&val[0])
 	}
 
-	pobj := (*C.double)(nil)
-	plb := (*C.double)(nil)
-	pub := (*C.double)(nil)
-	pvtype := (*C.char)(nil)
-	pname := (**C.char)(nil)
-	if len(vtype) > 0 {
-		pobj = (*C.double)(&obj[0])
-		plb = (*C.double)(&lb[0])
-		pub = (*C.double)(&ub[0])
-		pvtype = (*C.char)(&vtype[0])
-		pname = (**C.char)(&vname[0])
+	pobjs := (*C.double)(nil)
+	plbs := (*C.double)(nil)
+	pubs := (*C.double)(nil)
+	pvtypes := (*C.char)(nil)
+	pnames := (**C.char)(nil)
+	if len(vtypes) > 0 {
+		pobjs = (*C.double)(&objs[0])
+		plbs = (*C.double)(&lbs[0])
+		pubs = (*C.double)(&ubs[0])
+		pvtypes = (*C.char)(&vtypes[0])
+		pnames = (**C.char)(&vnames[0])
 	}
 
-	err := C.GRBaddvars(model.AsGRBModel, C.int(len(vtype)), C.int(numnz), pbeg, pind, pval, pobj, plb, pub, pvtype, pname)
-	if err != 0 {
-		return nil, model.MakeError(err)
+	errCode := C.GRBaddvars(model.AsGRBModel, C.int(len(vtypes)), C.int(numnz), pbeg, pind, pval, pobjs, plbs, pubs, pvtypes, pnames)
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
 		return nil, err
 	}
 
-	vars := make([]*Var, len(vtype), 0)
+	fmt.Printf("len(vtypes)=%v\n", len(vtypes))
+
+	vars := make([]*Var, len(vtypes))
 	xcols := len(model.Variables)
-	for i := xcols; i < xcols+len(vtype); i++ {
+	for i := xcols; i < xcols+len(vtypes); i++ {
 		model.Variables = append(model.Variables, Var{model, int32(i)})
 		vars[i] = &model.Variables[len(model.Variables)-1]
 	}
 	return vars, nil
+}
+
+func (model *Model) AddVars_InputChecking(vtypes []int8, objs []float64, lbs []float64, ubs []float64, names []string, constrs [][]*Constr, columns [][]float64) error {
+	// Check the model
+	err := model.Check()
+	if err != nil {
+		return model.MakeUninitializedError()
+	}
+
+	// Check the length of each of the slices.
+	if len(vtypes) != len(objs) {
+		return MismatchedLengthError{
+			Length1: len(vtypes),
+			Length2: len(objs),
+			Name1:   "vtypes",
+			Name2:   "objs",
+		}
+	}
+
+	if len(objs) != len(lbs) {
+		return MismatchedLengthError{
+			Length1: len(objs),
+			Name1:   "objs",
+			Length2: len(lbs),
+			Name2:   "lbs",
+		}
+	}
+
+	if len(lbs) != len(ubs) {
+		return MismatchedLengthError{
+			Length1: len(lbs),
+			Name1:   "lbs",
+			Length2: len(ubs),
+			Name2:   "ubs",
+		}
+	}
+
+	if len(ubs) != len(names) {
+		return MismatchedLengthError{
+			Length1: len(ubs),
+			Name1:   "ubs",
+			Length2: len(names),
+			Name2:   "names",
+		}
+	}
+
+	if len(constrs) > 0 {
+		if len(names) != len(constrs) {
+			return MismatchedLengthError{
+				Length1: len(names),
+				Name1:   "names",
+				Length2: len(constrs),
+				Name2:   "constrs",
+			}
+		}
+	}
+
+	if len(constrs) > 0 {
+		if len(constrs) != len(columns) {
+			return MismatchedLengthError{
+				Length1: len(constrs),
+				Name1:   "constrs",
+				Length2: len(columns),
+				Name2:   "columns",
+			}
+		}
+	}
+
+	// Everything is good!
+	return nil
 }
 
 /*

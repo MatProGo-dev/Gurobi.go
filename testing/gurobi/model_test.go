@@ -1,6 +1,7 @@
 package gurobi_test
 
 import (
+	"fmt"
 	"github.com/MatProGo-dev/Gurobi.go/gurobi"
 	"testing"
 )
@@ -103,4 +104,360 @@ func TestModel_AddVar2(t *testing.T) {
 		t.Errorf("Retrieved LB (%v) doesn't match expected (%v)", lb0, 0.0)
 	}
 
+}
+
+/*
+TestModel_AddVars1
+Description:
+
+	Tests that AddVars() throws an error when an unspecified model has been defined.
+*/
+func TestModel_AddVars1(t *testing.T) {
+	// Constants
+	var model0 *gurobi.Model
+
+	// Test
+	_, err := model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{},
+		[][]float64{},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != model0.MakeUninitializedError().Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars2
+Description:
+
+	Tests that AddVars() throws an error when
+	there is a different number of vtypes are specified
+	than objs
+*/
+func TestModel_AddVars2(t *testing.T) {
+	// Constants
+	env0, err := gurobi.NewEnv("testmodel-addvars2.log")
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel("testmodel-addvars2", env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	_, err = model0.AddVars(
+		[]int8{gurobi.CONTINUOUS, gurobi.INTEGER},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{},
+		[][]float64{},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != (gurobi.MismatchedLengthError{
+			Length1: 2,
+			Length2: 1,
+			Name1:   "vtypes",
+			Name2:   "objs",
+		}).Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars3
+Description:
+
+	Tests that AddVars() throws an error when
+	there is a different number of objs are specified
+	than lbs
+*/
+func TestModel_AddVars3(t *testing.T) {
+	// Constants
+	testIndex := 3
+	testName := fmt.Sprintf("testmodel-addvars%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	_, err = model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0, 1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{},
+		[][]float64{},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != (gurobi.MismatchedLengthError{
+			Length1: 1,
+			Length2: 2,
+			Name1:   "objs",
+			Name2:   "lbs",
+		}).Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars4
+Description:
+
+	Tests that AddVars() throws an error when
+	there is a different number of lbs are specified
+	than ubs
+*/
+func TestModel_AddVars4(t *testing.T) {
+	// Constants
+	testIndex := 4
+	testName := fmt.Sprintf("testmodel-addvars%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	_, err = model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0, gurobi.INFINITY},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{},
+		[][]float64{},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != (gurobi.MismatchedLengthError{
+			Length1: 1,
+			Length2: 2,
+			Name1:   "lbs",
+			Name2:   "ubs",
+		}).Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars5
+Description:
+
+	Tests that AddVars() throws an error when
+	there is a different number of ubs are specified
+	than names
+*/
+func TestModel_AddVars5(t *testing.T) {
+	// Constants
+	testIndex := 5
+	testName := fmt.Sprintf("testmodel-addvars%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	_, err = model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding", "chris-brown"},
+		[][]*gurobi.Constr{},
+		[][]float64{},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != (gurobi.MismatchedLengthError{
+			Length1: 1,
+			Length2: 2,
+			Name1:   "ubs",
+			Name2:   "names",
+		}).Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars6
+Description:
+
+	Tests that AddVars() throws an error when
+	there is a different number of names are specified
+	than constrs
+*/
+func TestModel_AddVars6(t *testing.T) {
+	// Constants
+	testIndex := 6
+	testName := fmt.Sprintf("testmodel-addvars%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	_, err = model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{
+			[]*gurobi.Constr{},
+			[]*gurobi.Constr{},
+		},
+		[][]float64{},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != (gurobi.MismatchedLengthError{
+			Length1: 1,
+			Length2: 2,
+			Name1:   "names",
+			Name2:   "constrs",
+		}).Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars7
+Description:
+
+	Tests that AddVars() throws an error when
+	there is a different number of columns are specified
+	than columns
+*/
+func TestModel_AddVars7(t *testing.T) {
+	// Constants
+	testIndex := 7
+	testName := fmt.Sprintf("testmodel-addvars%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	_, err = model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{
+			[]*gurobi.Constr{},
+		},
+		[][]float64{
+			[]float64{1.0},
+			[]float64{2.0},
+		},
+	)
+	if err == nil {
+		t.Errorf("No error was thrown, but there should have been!")
+	} else {
+		if err.Error() != (gurobi.MismatchedLengthError{
+			Length1: 1,
+			Length2: 2,
+			Name1:   "constrs",
+			Name2:   "columns",
+		}).Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestModel_AddVars8
+Description:
+
+	Tests that AddVars() successfully handles a call which only adds a single variable.
+*/
+func TestModel_AddVars8(t *testing.T) {
+	// Constants
+	testIndex := 8
+	testName := fmt.Sprintf("testmodel-addvars%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Test
+	vSlice0, err := model0.AddVars(
+		[]int8{gurobi.CONTINUOUS},
+		[]float64{0.0},
+		[]float64{-1.0},
+		[]float64{1.0},
+		[]string{"ellie-goulding"},
+		[][]*gurobi.Constr{},
+		[][]float64{},
+	)
+	if err != nil {
+		t.Errorf("unexpected error: %v!", err)
+	}
+
+	if len(vSlice0) != 1 {
+		t.Errorf("expected output slice to be of length 1; received length %v slice", len(vSlice0))
+	}
 }
