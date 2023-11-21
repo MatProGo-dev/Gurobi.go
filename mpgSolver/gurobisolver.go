@@ -276,7 +276,7 @@ func (gs *GurobiSolver) AddConstraint(constrIn optim.Constraint, errors ...error
 		// Cast and simplify
 		constrAsSC, _ := constrIn.(optim.ScalarConstraint)
 
-		simplifiedConstr, err := MoveVariablesToLHS(constrAsSC)
+		simplifiedConstr, err := constrAsSC.Simplify()
 		if err != nil {
 			fmt.Println("1")
 			return err

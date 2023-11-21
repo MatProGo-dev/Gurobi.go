@@ -88,7 +88,7 @@ func ParseMakeLibArguments(sfIn SetupFlags) (SetupFlags, error) {
 	argIndex := 1 // Skip entry 0
 	for argIndex < len(os.Args) {
 		// Share parsing data
-		fmt.Println("- Parsed input: %v", os.Args[argIndex])
+		fmt.Printf("- Parsed input: %v\n", os.Args[argIndex])
 
 		// Parse Inputs
 		switch {
