@@ -30,6 +30,30 @@ func TestModel_NewModel1(t *testing.T) {
 }
 
 /*
+TestModel_Check1
+Description:
+
+	Tests if Check() will fail if the env is not
+	yet defined in the Model object.
+*/
+func TestModel_Check1(t *testing.T) {
+	// Constants
+	model0 := gurobi.Model{
+		Variables: []gurobi.Var{},
+	}
+
+	// Tests
+	err := model0.Check()
+	if err == nil {
+		t.Errorf("expected an error, but none were thrown!")
+	} else {
+		if err.Error() != model0.Env.MakeUninitializedError().Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
 TestModel_NewModel1
 Description:
 

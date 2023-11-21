@@ -170,6 +170,11 @@ func (env *Env) Check() error {
 		return env.MakeUninitializedError()
 	}
 
+	// Gurobi env (the sole member of gurobi.Env is not yet defined.
+	if env.env == nil {
+		return env.MakeUninitializedError()
+	}
+
 	// If all checks passed, return nil
 	return nil
 }
