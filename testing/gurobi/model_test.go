@@ -131,6 +131,98 @@ func TestModel_AddVar2(t *testing.T) {
 }
 
 /*
+TestModel_AddVar3
+Description:
+
+	Tests that AddVar() successfully handles a call which
+	adds multiple variables AND contains pre-defined constraints.
+*/
+func TestModel_AddVar3(t *testing.T) {
+	// Constants
+	testIndex := 8
+	testName := fmt.Sprintf("testmodel-addvar%v", testIndex)
+
+	env0, err := gurobi.NewEnv(testName + `.log`)
+	if err != nil {
+		t.Errorf("unexpected error creating new environment: %v", err)
+	}
+
+	model0, err := gurobi.NewModel(testName+`-model`, env0)
+	if err != nil {
+		t.Errorf("unexpected error creating new model: %v", err)
+	}
+
+	// Define empty constraints
+	_, err = model0.AddConstr(
+		[]*gurobi.Var{},
+		[]float64{},
+		gurobi.SenseLessThan,
+		2.0,
+		"max-2",
+	)
+
+	emptyConstraint1, err := model0.AddConstr(
+		[]*gurobi.Var{},
+		[]float64{},
+		gurobi.SenseLessThan,
+		10.0,
+		"max-10",
+	)
+
+	// Test
+	columns := make([]float64, 1)
+	columns[0] = 1.0
+	v1, err := model0.AddVar(
+		gurobi.CONTINUOUS,
+		-1.0,
+		-1e3,
+		1e3,
+		"ellie-goulding",
+		[]*gurobi.Constr{emptyConstraint1}, // The constraint to modify
+		columns,                            // The new linear coefficient for v1 in constraint emptyConstraint1
+	)
+	if err != nil {
+		t.Errorf("unexpected error while adding variable: %v!", err)
+	}
+
+	// Solve the problem to make sure that the constraint was properly modified.
+
+	// Integrate new variables.
+	if err := model0.Update(); err != nil {
+		panic(err.Error())
+	}
+
+	// Optimize model
+	if err := model0.Optimize(); err != nil {
+		panic(err.Error())
+	}
+
+	optimstatus, err := model0.GetIntAttr(gurobi.INT_ATTR_STATUS)
+	if err != nil {
+		t.Errorf("there was an issue getting the optimization's status: %v", err.Error())
+	}
+
+	// Optimization should have been successful was it?
+	if optimstatus != gurobi.OPTIMAL {
+		t.Errorf("optimization status was not optimal! (%v)", optimstatus)
+	}
+
+	// WAs solution 10.0?
+	sol, err := model0.GetDoubleAttrVars(
+		gurobi.DBL_ATTR_X,
+		[]*gurobi.Var{v1},
+	)
+	if err != nil {
+		t.Errorf("there was an issue with getting the solution: %v", err.Error())
+	}
+
+	if sol[0] != 10.0 {
+		t.Errorf("expected solution to e")
+	}
+
+}
+
+/*
 TestModel_AddVars1
 Description:
 

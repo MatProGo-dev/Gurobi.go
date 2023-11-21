@@ -48,8 +48,12 @@ func (model *Model) Check() error {
 	return nil
 }
 
-// NewModel ...
-// create a new model from the environment.
+/*
+NewModel
+Description:
+
+	Creates a new model from a given environment.
+*/
 func NewModel(modelname string, env *Env) (*Model, error) {
 	err := env.Check()
 	if err != nil {
@@ -108,12 +112,12 @@ func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name
 		return nil, errors.New("either the length of constrs or columns are wrong")
 	}
 
-	ind := make([]int32, len(constrs), 0)
+	ind := make([]int32, len(constrs))
 	for i, c := range constrs {
-		if c.idx < 0 {
+		if c.Index < 0 {
 			return nil, errors.New("Invalid index in constrs")
 		}
-		ind[i] = c.idx
+		ind[i] = c.Index
 	}
 
 	pind := (*C.int)(nil)
@@ -166,7 +170,7 @@ func (model *Model) AddVars(vtypes []int8, objs []float64, lbs []float64, ubs []
 		}
 
 		for j := 0; j < len(constrs[i]); j++ {
-			idx := constrs[i][j].idx
+			idx := constrs[i][j].Index
 			if idx < 0 {
 				return nil, errors.New("")
 			}
@@ -214,7 +218,7 @@ func (model *Model) AddVars(vtypes []int8, objs []float64, lbs []float64, ubs []
 		return nil, err
 	}
 
-	fmt.Printf("len(vtypes)=%v\n", len(vtypes))
+	//fmt.Printf("len(vtypes)=%v\n", len(vtypes))
 
 	vars := make([]*Var, len(vtypes))
 	xcols := len(model.Variables)
@@ -314,8 +318,9 @@ Link:
 	https://www.gurobi.com/documentation/9.1/refman/c_addconstr.html
 */
 func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float64, constrname string) (*Constr, error) {
-	if model == nil {
-		return nil, errors.New("")
+	err := model.Check()
+	if err != nil {
+		return nil, model.MakeUninitializedError()
 	}
 
 	ind := make([]int32, len(vars))
@@ -333,16 +338,16 @@ func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float6
 		pval = (*C.double)(&val[0])
 	}
 
-	fmt.Printf("pind = %v\n", *pind)
-	fmt.Printf("ind = %v\n vars[0] = %v\n", ind, vars[0].Index)
+	//fmt.Printf("pind = %v\n", *pind)
+	//fmt.Printf("ind = %v\n vars[0] = %v\n", ind, vars[0].Index)
 
-	err := C.GRBaddconstr(
+	errCode := C.GRBaddconstr(
 		model.AsGRBModel,
 		C.int(len(ind)),
 		pind, pval,
 		C.char(sense), C.double(rhs), C.CString(constrname))
-	if err != 0 {
-		return nil, model.MakeError(err)
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
