@@ -358,13 +358,21 @@ func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float6
 	return &model.Constraints[len(model.Constraints)-1], nil
 }
 
-func (model *Model) AddConstrs(vars [][]*Var, val [][]float64, sense []int8, rhs []float64, constrname []string) ([]*Constr, error) {
-	if model == nil {
-		return nil, errors.New("")
+/*
+AddConstrs
+Description:
+
+	Adds a set of constraints at once.
+*/
+func (model *Model) AddConstrs(vars [][]*Var, vals [][]float64, senses []int8, rhs []float64, constrnames []string) ([]*Constr, error) {
+	err := model.Check()
+	if err != nil {
+		return nil, model.MakeUninitializedError()
 	}
 
-	if len(vars) != len(val) || len(val) != len(sense) || len(sense) != len(rhs) || len(rhs) != len(constrname) {
-		return nil, errors.New("")
+	err = model.InputChecking_AddConstrs(vars, vals, senses, rhs, constrnames)
+	if err != nil {
+		return nil, err
 	}
 
 	numnz := 0
@@ -372,12 +380,12 @@ func (model *Model) AddConstrs(vars [][]*Var, val [][]float64, sense []int8, rhs
 		numnz += len(v)
 	}
 
-	beg := make([]int32, len(constrname))
+	beg := make([]int32, len(constrnames))
 	ind := make([]int32, numnz)
-	_val := make([]float64, numnz)
+	_vals := make([]float64, numnz)
 	k := 0
 	for i := 0; i < len(vars); i++ {
-		if len(vars[i]) != len(val[i]) {
+		if len(vars[i]) != len(vals[i]) {
 			return nil, errors.New("")
 		}
 
@@ -387,52 +395,128 @@ func (model *Model) AddConstrs(vars [][]*Var, val [][]float64, sense []int8, rhs
 				return nil, errors.New("")
 			}
 			ind[k+j] = idx
-			_val[k+j] = val[i][j]
+			_vals[k+j] = vals[i][j]
 		}
 
 		beg[i] = int32(k)
 		k += len(vars[i])
 	}
 
-	name := make([](*C.char), len(constrname))
-	for i, n := range constrname {
+	name := make([](*C.char), len(constrnames))
+	for i, n := range constrnames {
 		name[i] = C.CString(n)
 	}
 
 	pbeg := (*C.int)(nil)
 	pind := (*C.int)(nil)
-	pval := (*C.double)(nil)
+	pvals := (*C.double)(nil)
 	if len(beg) > 0 {
 		pbeg = (*C.int)(&beg[0])
 		pind = (*C.int)(&ind[0])
-		pval = (*C.double)(&_val[0])
+		pvals = (*C.double)(&_vals[0])
 	}
 
-	psense := (*C.char)(nil)
+	psenses := (*C.char)(nil)
 	prhs := (*C.double)(nil)
 	pname := (**C.char)(nil)
-	if len(constrname) > 0 {
-		psense = (*C.char)(&sense[0])
+	if len(constrnames) > 0 {
+		psenses = (*C.char)(&senses[0])
 		prhs = (*C.double)(&rhs[0])
 		pname = (**C.char)(&name[0])
 	}
 
-	err := C.GRBaddconstrs(model.AsGRBModel, C.int(len(constrname)), C.int(numnz), pbeg, pind, pval, psense, prhs, pname)
-	if err != 0 {
-		return nil, model.MakeError(err)
+	errCode := C.GRBaddconstrs(model.AsGRBModel, C.int(len(constrnames)), C.int(numnz), pbeg, pind, pvals, psenses, prhs, pname)
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
 		return nil, err
 	}
 
-	constrs := make([]*Constr, len(constrname))
+	constrs := make([]*Constr, len(constrnames))
 	xrows := len(model.Constraints)
-	for i := xrows; i < xrows+len(constrname); i++ {
+	for i := xrows; i < xrows+len(constrnames); i++ {
 		model.Constraints = append(model.Constraints, Constr{model, int32(i)})
 		constrs[i] = &model.Constraints[len(model.Constraints)-1]
 	}
 	return constrs, nil
+}
+
+/*
+InputChecking_AddConstrs
+Description:
+
+	Checks the inputs to the AddConstrs function.
+*/
+func (model *Model) InputChecking_AddConstrs(vars [][]*Var, vals [][]float64, senses []int8, rhs []float64, constrnames []string) error {
+	// Check the model
+	err := model.Check()
+	if err != nil {
+		return model.MakeUninitializedError()
+	}
+
+	// Check the length of each of the slices.
+	if len(vars) != len(vals) {
+		return MismatchedLengthError{
+			Length1: len(vars),
+			Length2: len(vals),
+			Name1:   "vars",
+			Name2:   "vals",
+		}
+	}
+
+	if len(vals) != len(senses) {
+		return MismatchedLengthError{
+			Length1: len(vals),
+			Name1:   "vals",
+			Length2: len(senses),
+			Name2:   "senses",
+		}
+	}
+
+	if len(senses) != len(rhs) {
+		return MismatchedLengthError{
+			Length1: len(senses),
+			Name1:   "senses",
+			Length2: len(rhs),
+			Name2:   "rhs",
+		}
+	}
+
+	if len(rhs) != len(constrnames) {
+		return MismatchedLengthError{
+			Length1: len(rhs),
+			Name1:   "rhs",
+			Length2: len(constrnames),
+			Name2:   "constrnames",
+		}
+	}
+
+	//if len(constrs) > 0 {
+	//	if len(names) != len(constrs) {
+	//		return MismatchedLengthError{
+	//			Length1: len(names),
+	//			Name1:   "names",
+	//			Length2: len(constrs),
+	//			Name2:   "constrs",
+	//		}
+	//	}
+	//}
+	//
+	//if len(constrs) > 0 {
+	//	if len(constrs) != len(columns) {
+	//		return MismatchedLengthError{
+	//			Length1: len(constrs),
+	//			Name1:   "constrs",
+	//			Length2: len(columns),
+	//			Name2:   "columns",
+	//		}
+	//	}
+	//}
+
+	// Everything is good!
+	return nil
 }
 
 // SetObjective ...
