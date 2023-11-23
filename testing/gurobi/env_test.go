@@ -59,6 +59,28 @@ func TestEnv_SetTimeLimit1(t *testing.T) {
 }
 
 /*
+TestEnv_SetTimeLimit2
+Description:
+
+	Tests that the function throws an error, when it receives a
+	uninitialized.
+*/
+func TestEnv_SetTimeLimit2(t *testing.T) {
+	// Constants
+	var env0 *gurobi.Env
+
+	// Algorithm
+	err := env0.SetTimeLimit(1e2)
+	if err == nil {
+		t.Errorf("expected an error to be thrown, but received none!")
+	} else {
+		if err.Error() != env0.MakeUninitializedError().Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
 TestEnv_SetDBLParam1
 Description:
 
@@ -169,4 +191,26 @@ func TestEnv_Check2(t *testing.T) {
 		t.Errorf("unexpected error during Check(): %v", err)
 	}
 
+}
+
+/*
+TestEnv_GetTimeLimit1
+Description:
+
+	Tests that the function throws an error, when it receives a
+	uninitialized.
+*/
+func TestEnv_GetTimeLimit1(t *testing.T) {
+	// Constants
+	var env0 *gurobi.Env
+
+	// Algorithm
+	_, err := env0.GetTimeLimit()
+	if err == nil {
+		t.Errorf("expected an error to be thrown, but received none!")
+	} else {
+		if err.Error() != env0.MakeUninitializedError().Error() {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
 }
