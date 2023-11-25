@@ -109,6 +109,7 @@ func TestModel_AddVar2(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new env: %v", err)
 	}
+	defer os.Remove("testmodel-addvar2.log")
 
 	model0, err := gurobi.NewModel("testmodel-addvar2", env0)
 	if err != nil {
@@ -147,6 +148,7 @@ func TestModel_AddVar3(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -266,6 +268,7 @@ func TestModel_AddVars2(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove("testmodel-addvars2.log")
 
 	model0, err := gurobi.NewModel("testmodel-addvars2", env0)
 	if err != nil {
@@ -313,6 +316,7 @@ func TestModel_AddVars3(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -360,6 +364,7 @@ func TestModel_AddVars4(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -407,6 +412,7 @@ func TestModel_AddVars5(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -454,6 +460,7 @@ func TestModel_AddVars6(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -504,6 +511,7 @@ func TestModel_AddVars7(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -554,6 +562,7 @@ func TestModel_AddVars8(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {
@@ -595,6 +604,7 @@ func TestModel_AddVars9(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error creating new environment: %v", err)
 	}
+	defer os.Remove(testName + ".log")
 
 	model0, err := gurobi.NewModel(testName+`-model`, env0)
 	if err != nil {

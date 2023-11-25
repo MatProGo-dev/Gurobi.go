@@ -2,6 +2,7 @@ package gurobi_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	gurobi "github.com/MatProGo-dev/Gurobi.go/gurobi"
@@ -13,6 +14,7 @@ func Test_LP1(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
+	defer os.Remove("lp.log")
 	defer env.Free()
 
 	// Create an empty model.
@@ -67,6 +69,7 @@ func Test_LP1(t *testing.T) {
 	if err := model.Write("lp-hyperbox1.lp"); err != nil {
 		panic(err.Error())
 	}
+	defer os.Remove("lp-hyperbox1.lp")
 
 	// Capture solution information
 	optimstatus, err := model.GetIntAttr(gurobi.INT_ATTR_STATUS)

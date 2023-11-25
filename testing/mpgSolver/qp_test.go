@@ -5,6 +5,7 @@ import (
 	"github.com/MatProGo-dev/Gurobi.go/mpgSolver"
 	"github.com/MatProGo-dev/MatProInterface.go/optim"
 	"gonum.org/v1/gonum/mat"
+	"os"
 	"testing"
 )
 
@@ -20,9 +21,9 @@ func TestQP1(t *testing.T) {
 	m := optim.NewModel(modelName)
 	x := m.AddVariableVector(2)
 
-	gs := mpgSolver.NewGurobiSolver(
-		fmt.Sprintf("solvertest-%v", modelName),
-	)
+	testName := fmt.Sprintf("solvertest-%v", modelName)
+	gs := mpgSolver.NewGurobiSolver(testName)
+	defer os.Remove(gs.ModelName + ".log")
 
 	// Add Variables to Gurobi's Model
 	err := gs.AddVariables(x.Elements)
