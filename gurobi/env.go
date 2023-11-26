@@ -40,12 +40,13 @@ func (env *Env) SetTimeLimit(limitIn float64) error {
 	// Constants
 	paramName := "TimeLimit"
 
-	// Algorithm
-
-	if env == nil {
-		return fmt.Errorf("The input env variable to SetTimeLimit() was nil!")
+	// Input Checking
+	err := env.Check()
+	if err != nil {
+		return env.MakeUninitializedError()
 	}
 
+	// Algorithm
 	errcode := int(C.GRBsetdblparam(env.env, C.CString(paramName), C.double(limitIn)))
 	if errcode != 0 {
 		return fmt.Errorf("There was an error running GRBsetdblparam(): Error code %v", errcode)
@@ -67,12 +68,13 @@ func (env *Env) GetTimeLimit() (float64, error) {
 	// Constants
 	paramName := "TimeLimit"
 
-	// Algorithm
-
-	if env == nil {
-		return -1, fmt.Errorf("The input env variable to SetTimeLimit() was nil!")
+	// Input Checking
+	err := env.Check()
+	if err != nil {
+		return -1.0, env.MakeUninitializedError()
 	}
 
+	// Algorithm
 	var limitOut C.double
 	errcode := int(C.GRBgetdblparam(env.env, C.CString(paramName), &limitOut))
 	if errcode != 0 {
@@ -157,4 +159,24 @@ func IsValidDBLParam(paramName string) bool {
 	}
 
 	return paramNameIsValid
+}
+
+/*
+Check
+Description:
+
+	Checks whether or not the given environment is well-formed.
+*/
+func (env *Env) Check() error {
+	if env == nil {
+		return env.MakeUninitializedError()
+	}
+
+	// Gurobi env (the sole member of gurobi.Env is not yet defined.
+	if env.env == nil {
+		return env.MakeUninitializedError()
+	}
+
+	// If all checks passed, return nil
+	return nil
 }

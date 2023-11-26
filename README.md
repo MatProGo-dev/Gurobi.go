@@ -237,16 +237,16 @@ Note: As of November 2023, only QP1 has been tested.
 
 Warning: The setup script is designed to only work on Mac OS X. If you are interested in using this on a Windows machine, then there are no guarantees that it will work.
 
-### Installation in Module
+### I want to... Use This in My Go Project
 
 If you are using this as part of another Go project, then you will need to install this as a module ready for import.
 To do this, follow the instructions below:
 
-1. Use a "-d" `go get -d github.com/MatProGo-dev/Gurobi.go/gurobi`. Pay attention to which version appears in your terminal output.
+1. Get this module using the "-d" option. `go get -d github.com/MatProGo-dev/Gurobi.go/gurobi`. Pay attention to which version appears in your terminal output.
 2. Enter Go's internal installation of gurobi.go. For example, run `cd ~/go/pkg/mod/github.com/MatProGo-dev/Gurobi.go@v0.0.0-20221111000100-e629c3f29605` where the suffix is the version number from the previous output.
 3. Run go generate with sudo privileges from this installation. `sudo go generate`.
 
-### Development Installation
+### I want to... Improve On Gurobi.go
 
 If you wish to improve upon Gurobi.go, then you can simply clone the repository into your local file system and then run `go generate`.
 
@@ -259,7 +259,7 @@ See [LICENSE](LICENSE).
 
 ## To-Dos
 
-* [ ] Create Documentation for how to implement QP1 with
-  * [ ] MatProInterface.go
-  * [ ] Gurobi.go
-* [ ] Set up CodeCoverage pipeline.
+* [ ] Figure Out What Needs to Change in `setup` package to work on:
+  * [ ] Windows Computers
+  * [ ] Linux Computers
+* [ ] Invite Others to Participate

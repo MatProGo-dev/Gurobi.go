@@ -16,17 +16,54 @@ type Model struct {
 	Constraints []Constr
 }
 
-// NewModel ...
-// create a new model from the environment.
+/*
+MakeUninitializedError
+Description:
+
+	This function simply returns a fixed error for when the model is not initialized.
+*/
+func (model *Model) MakeUninitializedError() error {
+	return fmt.Errorf("The gurobi model was not yet initialized!")
+}
+
+/*
+Check
+Description:
+
+	Checks that the model has been properly created.
+*/
+func (model *Model) Check() error {
+	// Check to see if pointer is nil
+	if model == nil {
+		return model.MakeUninitializedError()
+	}
+
+	// Check on env component
+	err := model.Env.Check()
+	if err != nil {
+		return err
+	}
+
+	// If no other checks were flagged, then return nil.
+	return nil
+}
+
+/*
+NewModel
+Description:
+
+	Creates a new model from a given environment.
+*/
 func NewModel(modelname string, env *Env) (*Model, error) {
-	if env == nil {
-		return nil, errors.New("This environment is not created yet.")
+	err := env.Check()
+	if err != nil {
+		return nil, env.MakeUninitializedError()
 	}
 
 	var model *C.GRBmodel
 	errcode := C.GRBnewmodel(env.env, &model, C.CString(modelname), 0, nil, nil, nil, nil, nil)
 	if errcode != 0 {
-		return nil, env.makeError(errcode)
+		return nil, env.MakeError(errcode)
 	}
 
 	newenv := C.GRBgetenv(model)
@@ -66,20 +103,21 @@ Links:
 	Documentation for 9.0: https://www.gurobi.com/documentation/9.0/refman/c_addvar.html
 */
 func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name string, constrs []*Constr, columns []float64) (*Var, error) {
-	if model == nil {
-		return nil, errors.New("model is not initialized")
+	err := model.Check()
+	if err != nil {
+		return nil, err
 	}
 
 	if len(constrs) != len(columns) {
 		return nil, errors.New("either the length of constrs or columns are wrong")
 	}
 
-	ind := make([]int32, len(constrs), 0)
+	ind := make([]int32, len(constrs))
 	for i, c := range constrs {
-		if c.idx < 0 {
+		if c.Index < 0 {
 			return nil, errors.New("Invalid index in constrs")
 		}
-		ind[i] = c.idx
+		ind[i] = c.Index
 	}
 
 	pind := (*C.int)(nil)
@@ -89,27 +127,32 @@ func (model *Model) AddVar(vtype int8, obj float64, lb float64, ub float64, name
 		pval = (*C.double)(&columns[0])
 	}
 
-	err := C.GRBaddvar(model.AsGRBModel, C.int(len(constrs)), pind, pval, C.double(obj), C.double(lb), C.double(ub), C.char(vtype), C.CString(name))
-	if err != 0 {
-		return nil, model.makeError(err)
+	errCode := C.GRBaddvar(model.AsGRBModel, C.int(len(constrs)), pind, pval, C.double(obj), C.double(lb), C.double(ub), C.char(vtype), C.CString(name))
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
 		return nil, err
 	}
 
+	fmt.Println("dummy-2")
+
 	model.Variables = append(model.Variables, Var{model, int32(len(model.Variables))})
 	return &model.Variables[len(model.Variables)-1], nil
 }
 
-// AddVars ...
-func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []float64, name []string, constrs [][]*Constr, columns [][]float64) ([]*Var, error) {
-	if model == nil {
-		return nil, errors.New("")
-	}
+/*
+AddVars
+Description:
 
-	if len(vtype) != len(obj) || len(obj) != len(lb) || len(lb) != len(ub) || len(ub) != len(name) || len(name) != len(constrs) || len(constrs) != len(columns) {
-		return nil, errors.New("")
+	Adds the list of variables defined by the input slices.
+*/
+func (model *Model) AddVars(vtypes []int8, objs []float64, lbs []float64, ubs []float64, names []string, constrs [][]*Constr, columns [][]float64) ([]*Var, error) {
+	// Input Processing
+	err := model.AddVars_InputChecking(vtypes, objs, lbs, ubs, names, constrs, columns)
+	if err != nil {
+		return nil, err
 	}
 
 	numnz := 0
@@ -127,7 +170,7 @@ func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []floa
 		}
 
 		for j := 0; j < len(constrs[i]); j++ {
-			idx := constrs[i][j].idx
+			idx := constrs[i][j].Index
 			if idx < 0 {
 				return nil, errors.New("")
 			}
@@ -139,9 +182,9 @@ func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []floa
 		k += len(constrs[i])
 	}
 
-	vname := make([](*C.char), len(vtype))
-	for i, n := range name {
-		vname[i] = C.CString(n)
+	vnames := make([](*C.char), len(vtypes))
+	for i, n := range names {
+		vnames[i] = C.CString(n)
 	}
 
 	pbeg := (*C.int)(nil)
@@ -153,35 +196,107 @@ func (model *Model) AddVars(vtype []int8, obj []float64, lb []float64, ub []floa
 		pval = (*C.double)(&val[0])
 	}
 
-	pobj := (*C.double)(nil)
-	plb := (*C.double)(nil)
-	pub := (*C.double)(nil)
-	pvtype := (*C.char)(nil)
-	pname := (**C.char)(nil)
-	if len(vtype) > 0 {
-		pobj = (*C.double)(&obj[0])
-		plb = (*C.double)(&lb[0])
-		pub = (*C.double)(&ub[0])
-		pvtype = (*C.char)(&vtype[0])
-		pname = (**C.char)(&vname[0])
+	pobjs := (*C.double)(nil)
+	plbs := (*C.double)(nil)
+	pubs := (*C.double)(nil)
+	pvtypes := (*C.char)(nil)
+	pnames := (**C.char)(nil)
+	if len(vtypes) > 0 {
+		pobjs = (*C.double)(&objs[0])
+		plbs = (*C.double)(&lbs[0])
+		pubs = (*C.double)(&ubs[0])
+		pvtypes = (*C.char)(&vtypes[0])
+		pnames = (**C.char)(&vnames[0])
 	}
 
-	err := C.GRBaddvars(model.AsGRBModel, C.int(len(vtype)), C.int(numnz), pbeg, pind, pval, pobj, plb, pub, pvtype, pname)
-	if err != 0 {
-		return nil, model.makeError(err)
+	errCode := C.GRBaddvars(model.AsGRBModel, C.int(len(vtypes)), C.int(numnz), pbeg, pind, pval, pobjs, plbs, pubs, pvtypes, pnames)
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
 		return nil, err
 	}
 
-	vars := make([]*Var, len(vtype), 0)
+	//fmt.Printf("len(vtypes)=%v\n", len(vtypes))
+
+	vars := make([]*Var, len(vtypes))
 	xcols := len(model.Variables)
-	for i := xcols; i < xcols+len(vtype); i++ {
+	for i := xcols; i < xcols+len(vtypes); i++ {
 		model.Variables = append(model.Variables, Var{model, int32(i)})
 		vars[i] = &model.Variables[len(model.Variables)-1]
 	}
 	return vars, nil
+}
+
+func (model *Model) AddVars_InputChecking(vtypes []int8, objs []float64, lbs []float64, ubs []float64, names []string, constrs [][]*Constr, columns [][]float64) error {
+	// Check the model
+	err := model.Check()
+	if err != nil {
+		return model.MakeUninitializedError()
+	}
+
+	// Check the length of each of the slices.
+	if len(vtypes) != len(objs) {
+		return MismatchedLengthError{
+			Length1: len(vtypes),
+			Length2: len(objs),
+			Name1:   "vtypes",
+			Name2:   "objs",
+		}
+	}
+
+	if len(objs) != len(lbs) {
+		return MismatchedLengthError{
+			Length1: len(objs),
+			Name1:   "objs",
+			Length2: len(lbs),
+			Name2:   "lbs",
+		}
+	}
+
+	if len(lbs) != len(ubs) {
+		return MismatchedLengthError{
+			Length1: len(lbs),
+			Name1:   "lbs",
+			Length2: len(ubs),
+			Name2:   "ubs",
+		}
+	}
+
+	if len(ubs) != len(names) {
+		return MismatchedLengthError{
+			Length1: len(ubs),
+			Name1:   "ubs",
+			Length2: len(names),
+			Name2:   "names",
+		}
+	}
+
+	if len(constrs) > 0 {
+		if len(names) != len(constrs) {
+			return MismatchedLengthError{
+				Length1: len(names),
+				Name1:   "names",
+				Length2: len(constrs),
+				Name2:   "constrs",
+			}
+		}
+	}
+
+	if len(constrs) > 0 {
+		if len(constrs) != len(columns) {
+			return MismatchedLengthError{
+				Length1: len(constrs),
+				Name1:   "constrs",
+				Length2: len(columns),
+				Name2:   "columns",
+			}
+		}
+	}
+
+	// Everything is good!
+	return nil
 }
 
 /*
@@ -203,8 +318,9 @@ Link:
 	https://www.gurobi.com/documentation/9.1/refman/c_addconstr.html
 */
 func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float64, constrname string) (*Constr, error) {
-	if model == nil {
-		return nil, errors.New("")
+	err := model.Check()
+	if err != nil {
+		return nil, model.MakeUninitializedError()
 	}
 
 	ind := make([]int32, len(vars))
@@ -222,16 +338,16 @@ func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float6
 		pval = (*C.double)(&val[0])
 	}
 
-	fmt.Printf("pind = %v\n", *pind)
-	fmt.Printf("ind = %v\n vars[0] = %v\n", ind, vars[0].Index)
+	//fmt.Printf("pind = %v\n", *pind)
+	//fmt.Printf("ind = %v\n vars[0] = %v\n", ind, vars[0].Index)
 
-	err := C.GRBaddconstr(
+	errCode := C.GRBaddconstr(
 		model.AsGRBModel,
 		C.int(len(ind)),
 		pind, pval,
 		C.char(sense), C.double(rhs), C.CString(constrname))
-	if err != 0 {
-		return nil, model.makeError(err)
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
@@ -242,13 +358,21 @@ func (model *Model) AddConstr(vars []*Var, val []float64, sense int8, rhs float6
 	return &model.Constraints[len(model.Constraints)-1], nil
 }
 
-func (model *Model) AddConstrs(vars [][]*Var, val [][]float64, sense []int8, rhs []float64, constrname []string) ([]*Constr, error) {
-	if model == nil {
-		return nil, errors.New("")
+/*
+AddConstrs
+Description:
+
+	Adds a set of constraints at once.
+*/
+func (model *Model) AddConstrs(vars [][]*Var, vals [][]float64, senses []int8, rhs []float64, constrnames []string) ([]*Constr, error) {
+	err := model.Check()
+	if err != nil {
+		return nil, model.MakeUninitializedError()
 	}
 
-	if len(vars) != len(val) || len(val) != len(sense) || len(sense) != len(rhs) || len(rhs) != len(constrname) {
-		return nil, errors.New("")
+	err = model.InputChecking_AddConstrs(vars, vals, senses, rhs, constrnames)
+	if err != nil {
+		return nil, err
 	}
 
 	numnz := 0
@@ -256,12 +380,12 @@ func (model *Model) AddConstrs(vars [][]*Var, val [][]float64, sense []int8, rhs
 		numnz += len(v)
 	}
 
-	beg := make([]int32, len(constrname))
+	beg := make([]int32, len(constrnames))
 	ind := make([]int32, numnz)
-	_val := make([]float64, numnz)
+	_vals := make([]float64, numnz)
 	k := 0
 	for i := 0; i < len(vars); i++ {
-		if len(vars[i]) != len(val[i]) {
+		if len(vars[i]) != len(vals[i]) {
 			return nil, errors.New("")
 		}
 
@@ -271,52 +395,128 @@ func (model *Model) AddConstrs(vars [][]*Var, val [][]float64, sense []int8, rhs
 				return nil, errors.New("")
 			}
 			ind[k+j] = idx
-			_val[k+j] = val[i][j]
+			_vals[k+j] = vals[i][j]
 		}
 
 		beg[i] = int32(k)
 		k += len(vars[i])
 	}
 
-	name := make([](*C.char), len(constrname))
-	for i, n := range constrname {
+	name := make([](*C.char), len(constrnames))
+	for i, n := range constrnames {
 		name[i] = C.CString(n)
 	}
 
 	pbeg := (*C.int)(nil)
 	pind := (*C.int)(nil)
-	pval := (*C.double)(nil)
+	pvals := (*C.double)(nil)
 	if len(beg) > 0 {
 		pbeg = (*C.int)(&beg[0])
 		pind = (*C.int)(&ind[0])
-		pval = (*C.double)(&_val[0])
+		pvals = (*C.double)(&_vals[0])
 	}
 
-	psense := (*C.char)(nil)
+	psenses := (*C.char)(nil)
 	prhs := (*C.double)(nil)
 	pname := (**C.char)(nil)
-	if len(constrname) > 0 {
-		psense = (*C.char)(&sense[0])
+	if len(constrnames) > 0 {
+		psenses = (*C.char)(&senses[0])
 		prhs = (*C.double)(&rhs[0])
 		pname = (**C.char)(&name[0])
 	}
 
-	err := C.GRBaddconstrs(model.AsGRBModel, C.int(len(constrname)), C.int(numnz), pbeg, pind, pval, psense, prhs, pname)
-	if err != 0 {
-		return nil, model.makeError(err)
+	errCode := C.GRBaddconstrs(model.AsGRBModel, C.int(len(constrnames)), C.int(numnz), pbeg, pind, pvals, psenses, prhs, pname)
+	if errCode != 0 {
+		return nil, model.MakeError(errCode)
 	}
 
 	if err := model.Update(); err != nil {
 		return nil, err
 	}
 
-	constrs := make([]*Constr, len(constrname))
+	constrs := make([]*Constr, len(constrnames))
 	xrows := len(model.Constraints)
-	for i := xrows; i < xrows+len(constrname); i++ {
+	for i := xrows; i < xrows+len(constrnames); i++ {
 		model.Constraints = append(model.Constraints, Constr{model, int32(i)})
 		constrs[i] = &model.Constraints[len(model.Constraints)-1]
 	}
 	return constrs, nil
+}
+
+/*
+InputChecking_AddConstrs
+Description:
+
+	Checks the inputs to the AddConstrs function.
+*/
+func (model *Model) InputChecking_AddConstrs(vars [][]*Var, vals [][]float64, senses []int8, rhs []float64, constrnames []string) error {
+	// Check the model
+	err := model.Check()
+	if err != nil {
+		return model.MakeUninitializedError()
+	}
+
+	// Check the length of each of the slices.
+	if len(vars) != len(vals) {
+		return MismatchedLengthError{
+			Length1: len(vars),
+			Length2: len(vals),
+			Name1:   "vars",
+			Name2:   "vals",
+		}
+	}
+
+	if len(vals) != len(senses) {
+		return MismatchedLengthError{
+			Length1: len(vals),
+			Name1:   "vals",
+			Length2: len(senses),
+			Name2:   "senses",
+		}
+	}
+
+	if len(senses) != len(rhs) {
+		return MismatchedLengthError{
+			Length1: len(senses),
+			Name1:   "senses",
+			Length2: len(rhs),
+			Name2:   "rhs",
+		}
+	}
+
+	if len(rhs) != len(constrnames) {
+		return MismatchedLengthError{
+			Length1: len(rhs),
+			Name1:   "rhs",
+			Length2: len(constrnames),
+			Name2:   "constrnames",
+		}
+	}
+
+	//if len(constrs) > 0 {
+	//	if len(names) != len(constrs) {
+	//		return MismatchedLengthError{
+	//			Length1: len(names),
+	//			Name1:   "names",
+	//			Length2: len(constrs),
+	//			Name2:   "constrs",
+	//		}
+	//	}
+	//}
+	//
+	//if len(constrs) > 0 {
+	//	if len(constrs) != len(columns) {
+	//		return MismatchedLengthError{
+	//			Length1: len(constrs),
+	//			Name1:   "constrs",
+	//			Length2: len(columns),
+	//			Name2:   "columns",
+	//		}
+	//	}
+	//}
+
+	// Everything is good!
+	return nil
 }
 
 // SetObjective ...
@@ -324,7 +524,7 @@ func (model *Model) SetObjective(objectiveExpr interface{}, sense int32) error {
 
 	// Clear Out All Previous Quadratic Objective Terms
 	if err := C.GRBdelq(model.AsGRBModel); err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 
 	// Detect the Type of Objective We Have
@@ -439,7 +639,7 @@ func (model *Model) addQPTerms(qrow []*Var, qcol []*Var, qval []float64) error {
 
 	err := C.GRBaddqpterms(model.AsGRBModel, C.int(len(qrow)), pqrow, pqcol, pqval)
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 
 	return nil
@@ -452,7 +652,7 @@ func (model *Model) Update() error {
 	}
 	err := C.GRBupdatemodel(model.AsGRBModel)
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -464,7 +664,7 @@ func (model *Model) Optimize() error {
 	}
 	err := C.GRBoptimize(model.AsGRBModel)
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -476,7 +676,7 @@ func (model *Model) Write(filename string) error {
 	}
 	err := C.GRBwrite(model.AsGRBModel, C.CString(filename))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -489,7 +689,7 @@ func (model *Model) GetIntAttr(attrname string) (int32, error) {
 	var attr int32
 	err := C.GRBgetintattr(model.AsGRBModel, C.CString(attrname), (*C.int)(&attr))
 	if err != 0 {
-		return 0, model.makeError(err)
+		return 0, model.MakeError(err)
 	}
 	return attr, nil
 }
@@ -502,7 +702,7 @@ func (model *Model) GetDoubleAttr(attrname string) (float64, error) {
 	var attr float64
 	err := C.GRBgetdblattr(model.AsGRBModel, C.CString(attrname), (*C.double)(&attr))
 	if err != 0 {
-		return 0, model.makeError(err)
+		return 0, model.MakeError(err)
 	}
 	return attr, nil
 }
@@ -515,7 +715,7 @@ func (model *Model) GetStringAttr(attrname string) (string, error) {
 	var attr *C.char
 	err := C.GRBgetstrattr(model.AsGRBModel, C.CString(attrname), (**C.char)(&attr))
 	if err != 0 {
-		return "", model.makeError(err)
+		return "", model.MakeError(err)
 	}
 	return C.GoString(attr), nil
 }
@@ -527,7 +727,7 @@ func (model *Model) SetIntAttr(attrname string, value int32) error {
 	}
 	err := C.GRBsetintattr(model.AsGRBModel, C.CString(attrname), C.int(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -539,7 +739,7 @@ func (model *Model) SetDoubleAttr(attrname string, value float64) error {
 	}
 	err := C.GRBsetdblattr(model.AsGRBModel, C.CString(attrname), C.double(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -551,7 +751,7 @@ func (model *Model) SetStringAttr(attrname string, value string) error {
 	}
 	err := C.GRBsetstrattr(model.AsGRBModel, C.CString(attrname), C.CString(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -582,12 +782,12 @@ func (model *Model) SetDoubleAttrVars(attrname string, vars []*Var, value []floa
 
 func (model *Model) getIntAttrElement(attr string, ind int32) (int32, error) {
 	if model == nil {
-		return 0.0, errors.New("")
+		return 0.0, model.MakeUninitializedError()
 	}
 	var value int32
 	err := C.GRBgetintattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), (*C.int)(&value))
 	if err != 0 {
-		return 0, model.makeError(err)
+		return 0, model.MakeError(err)
 	}
 	return value, nil
 }
@@ -599,7 +799,7 @@ func (model *Model) getCharAttrElement(attr string, ind int32) (int8, error) {
 	var value int8
 	err := C.GRBgetcharattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), (*C.char)(&value))
 	if err != 0 {
-		return 0, model.makeError(err)
+		return 0, model.MakeError(err)
 	}
 	return value, nil
 }
@@ -611,7 +811,7 @@ func (model *Model) getDoubleAttrElement(attr string, ind int32) (float64, error
 	var value float64
 	err := C.GRBgetdblattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), (*C.double)(&value))
 	if err != 0 {
-		return 0, model.makeError(err)
+		return 0, model.MakeError(err)
 	}
 	return value, nil
 }
@@ -623,7 +823,7 @@ func (model *Model) getStringAttrElement(attr string, ind int32) (string, error)
 	var value *C.char
 	err := C.GRBgetstrattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), (**C.char)(&value))
 	if err != 0 {
-		return "", model.makeError(err)
+		return "", model.MakeError(err)
 	}
 	return C.GoString(value), nil
 }
@@ -634,7 +834,7 @@ func (model *Model) setIntAttrElement(attr string, ind int32, value int32) error
 	}
 	err := C.GRBsetintattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), C.int(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -645,7 +845,7 @@ func (model *Model) setCharAttrElement(attr string, ind int32, value int8) error
 	}
 	err := C.GRBsetcharattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), C.char(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -656,7 +856,7 @@ func (model *Model) setDoubleAttrElement(attr string, ind int32, value float64) 
 	}
 	err := C.GRBsetdblattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), C.double(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -667,7 +867,7 @@ func (model *Model) setStringAttrElement(attr string, ind int32, value string) e
 	}
 	err := C.GRBsetstrattrelement(model.AsGRBModel, C.CString(attr), C.int(ind), C.CString(value))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }
@@ -682,7 +882,7 @@ func (model *Model) getDoubleAttrList(attrname string, ind []int32) ([]float64, 
 	value := make([]float64, len(ind))
 	err := C.GRBgetdblattrlist(model.AsGRBModel, C.CString(attrname), C.int(len(ind)), (*C.int)(&ind[0]), (*C.double)(&value[0]))
 	if err != 0 {
-		return []float64{}, model.makeError(err)
+		return []float64{}, model.MakeError(err)
 	}
 	return value, nil
 }
@@ -699,7 +899,7 @@ func (model *Model) setDoubleAttrList(attrname string, ind []int32, value []floa
 	}
 	err := C.GRBsetdblattrlist(model.AsGRBModel, C.CString(attrname), C.int(len(ind)), (*C.int)(&ind[0]), (*C.double)(&value[0]))
 	if err != 0 {
-		return model.makeError(err)
+		return model.MakeError(err)
 	}
 	return nil
 }

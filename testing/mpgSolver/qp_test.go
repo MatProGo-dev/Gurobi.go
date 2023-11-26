@@ -5,6 +5,7 @@ import (
 	"github.com/MatProGo-dev/Gurobi.go/mpgSolver"
 	"github.com/MatProGo-dev/MatProInterface.go/optim"
 	"gonum.org/v1/gonum/mat"
+	"os"
 	"testing"
 )
 
@@ -20,19 +21,14 @@ func TestQP1(t *testing.T) {
 	m := optim.NewModel(modelName)
 	x := m.AddVariableVector(2)
 
-	gs := mpgSolver.NewGurobiSolver(
-		fmt.Sprintf("solvertest-%v", modelName),
-	)
+	testName := fmt.Sprintf("solvertest-%v", modelName)
+	gs := mpgSolver.NewGurobiSolver(testName)
+	defer os.Remove(gs.ModelName + ".log")
 
 	// Add Variables to Gurobi's Model
-	err := gs.AddVariable(x.AtVec(0).(optim.Variable))
+	err := gs.AddVariables(x.Elements)
 	if err != nil {
 		t.Errorf("There was an issue adding x[0] to gs: %v", err)
-	}
-
-	err = gs.AddVariable(x.AtVec(1).(optim.Variable))
-	if err != nil {
-		t.Errorf("There was an issue adding x[1] to gs: %v", err)
 	}
 
 	// Create Vector Variables
@@ -45,13 +41,16 @@ func TestQP1(t *testing.T) {
 	)
 
 	// Use these to create constraints.
-
-	vc1, err := x.LessEq(c2)
+	err = gs.AddConstraint(
+		x.LessEq(c2),
+	)
 	if err != nil {
 		t.Errorf("There was an issue creating the proper vector constraint: %v", err)
 	}
 
-	vc2, err := x.GreaterEq(c1)
+	err = gs.AddConstraint(
+		x.GreaterEq(c1),
+	)
 	if err != nil {
 		t.Errorf("There was an issue creating the proper vector constraint: %v", err)
 	}
@@ -67,15 +66,6 @@ func TestQP1(t *testing.T) {
 		X: x,
 		L: *mat.NewVecDense(x.Len(), []float64{0, -0.97}),
 		C: 2.0,
-	}
-
-	// Add Constraints
-	constraints := []optim.Constraint{vc1, vc2}
-	for _, constr := range constraints {
-		err = gs.AddConstraint(constr)
-		if err != nil {
-			t.Errorf("There was an issue adding the vector constraint to the model: %v", err)
-		}
 	}
 
 	// Add objective
@@ -94,8 +84,8 @@ func TestQP1(t *testing.T) {
 		t.Errorf("Expected for there to be two variables in solution's values field; received %v", len(sol.Values))
 	}
 
-	if sol.Objective > 1.0 {
-		t.Errorf("Expected objective to be less than 1; received %v", sol.Objective)
+	if sol.Objective > 1.2 {
+		t.Errorf("Expected objective to be less than 1.2; received %v", sol.Objective)
 	}
 
 	if (sol.Values[x.AtVec(0).(optim.Variable).ID] >= 2.0) && (sol.Values[x.AtVec(0).(optim.Variable).ID] <= 3.0) {

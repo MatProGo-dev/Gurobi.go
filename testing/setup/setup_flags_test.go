@@ -83,3 +83,103 @@ func TestSetupFlags_WriteHeaderFile1(t *testing.T) {
 	}
 	defer os.Remove(sf0.HeaderFilename)
 }
+
+/*
+TestSetupFlags_CreatePackageLine1
+Description:
+
+	Tests that the package line is properly created in a go file.
+*/
+func TestSetupFlags_CreatePackageLine1(t *testing.T) {
+	// Constants
+	sf0, _ := setup.GetDefaultSetupFlags()
+
+	// Algorithm
+	line0, err := setup.CreatePackageLine(sf0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(
+		line0,
+		"package",
+	) {
+		t.Errorf("line is expected to contain the word \"package\", but it did not.")
+	}
+}
+
+/*
+TestSetupFlags_CreateLDFlagsDirective1
+Description:
+
+	Tests the LD_Flags string is properly created by the CreateLDFlagsDirective().
+*/
+func TestSetupFlags_CreateLDFlagsDirective1(t *testing.T) {
+	// Constants
+	sf0, _ := setup.GetDefaultSetupFlags()
+
+	// Algorithm
+	directive0, err := setup.CreateLDFlagsDirective(sf0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(
+		directive0,
+		"LDFLAGS",
+	) {
+		t.Errorf("line is expected to contain the word \"LDFLAGS\", but it did not.")
+	}
+
+	if !strings.Contains(
+		directive0,
+		"gurobi_c++",
+	) {
+		t.Errorf("line is expected to contain the word \"gurobi_c++\", but it did not.")
+	}
+}
+
+/*
+TestSetupFlags_CreateLDFlagsDirective1
+Description:
+
+	Tests the LD_Flags string is properly created by the CreateLDFlagsDirective().
+*/
+func TestSetupFlags_CreateLDFlagsDirective2(t *testing.T) {
+	// Constants
+	sf0, _ := setup.GetDefaultSetupFlags()
+	sf0.GurobiHome = "tempt"
+
+	// Algorithm
+	_, err := setup.CreateLDFlagsDirective(sf0)
+	if err == nil {
+		t.Errorf("no error was thrown, but they should have been!")
+	} else {
+		if !strings.Contains(
+			err.Error(),
+			"\"gurobi\" is not found in the setup flag's GurobiHome!",
+		) {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+/*
+TestSetupFlags_WriteLibGo1
+Description:
+
+	Testing that the WriteLibGo1 file
+*/
+func TestSetupFlags_WriteLibGo1(t *testing.T) {
+	// Constants
+	sf0, _ := setup.GetDefaultSetupFlags()
+	sf0.GoFilename = "./test_lib.go"
+	sf0.PackageName = "test_setup"
+
+	// Algorithm
+	err := setup.WriteLibGo(sf0)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	defer os.Remove(sf0.GoFilename)
+}

@@ -88,7 +88,7 @@ func ParseMakeLibArguments(sfIn SetupFlags) (SetupFlags, error) {
 	argIndex := 1 // Skip entry 0
 	for argIndex < len(os.Args) {
 		// Share parsing data
-		fmt.Println("- Parsed input: %v", os.Args[argIndex])
+		fmt.Printf("- Parsed input: %v\n", os.Args[argIndex])
 
 		// Parse Inputs
 		switch {
@@ -171,6 +171,9 @@ func CreateLDFlagsDirective(sf SetupFlags) (string, error) {
 func (mlf *SetupFlags) ToGurobiVersionInfo() (GurobiVersionInfo, error) {
 	// Split the GurobiHome variable by the name gurobi
 	GurobiWordIndexStart := strings.Index(mlf.GurobiHome, "gurobi")
+	if GurobiWordIndexStart == -1 {
+		return GurobiVersionInfo{}, fmt.Errorf("\"gurobi\" is not found in the setup flag's GurobiHome!")
+	}
 
 	GurobiHomeNameWithoutStart := mlf.GurobiHome[GurobiWordIndexStart:]
 	GurobiDirNameIndexEnd := strings.Index(GurobiHomeNameWithoutStart, "/")

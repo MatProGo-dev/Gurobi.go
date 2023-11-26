@@ -27,14 +27,14 @@ Description:
 
 	Create a new gurobi solver object.
 */
-func NewGurobiSolver(modelName string) *GurobiSolver {
+func NewGurobiSolver(modelName string) GurobiSolver {
 	// Constants
 
 	// Algorithm
 	newGS := GurobiSolver{}
 	newGS.CreateModel(modelName)
 
-	return &newGS
+	return newGS
 
 }
 
@@ -259,8 +259,13 @@ Description:
 
 	Adds a single constraint to the gurobi model object inside of the current GurobiSolver object.
 */
-func (gs *GurobiSolver) AddConstraint(constrIn optim.Constraint) error {
+func (gs *GurobiSolver) AddConstraint(constrIn optim.Constraint, errors ...error) error {
 	// Input Checking
+	err := optim.CheckErrors(errors)
+	if err != nil {
+		return err
+	}
+
 	if !optim.IsConstraint(constrIn) {
 		return fmt.Errorf("The input to AddConstr is not recognized as a constraint!")
 	}
@@ -271,7 +276,7 @@ func (gs *GurobiSolver) AddConstraint(constrIn optim.Constraint) error {
 		// Cast and simplify
 		constrAsSC, _ := constrIn.(optim.ScalarConstraint)
 
-		simplifiedConstr, err := MoveVariablesToLHS(constrAsSC)
+		simplifiedConstr, err := constrAsSC.Simplify()
 		if err != nil {
 			fmt.Println("1")
 			return err
@@ -504,7 +509,7 @@ func Solve(model optim.Model) (optim.Solution, GurobiSolver, error) {
 	err := solver.AddVariables(model.Variables)
 	if err != nil {
 		return optim.Solution{},
-			*solver,
+			solver,
 			fmt.Errorf("error adding MPG variables to gurobi model: %v", err)
 	}
 
@@ -513,7 +518,7 @@ func Solve(model optim.Model) (optim.Solution, GurobiSolver, error) {
 		err = solver.AddConstraint(constraint)
 		if err != nil {
 			return optim.Solution{},
-				*solver,
+				solver,
 				fmt.Errorf(
 					"there was an issue adding %v-th constraint: %v",
 					i, constraint,
@@ -525,7 +530,7 @@ func Solve(model optim.Model) (optim.Solution, GurobiSolver, error) {
 	err = solver.SetObjective(*model.Obj)
 	if err != nil {
 		return optim.Solution{},
-			*solver,
+			solver,
 			fmt.Errorf(
 				"there was an issue adding the model's objective: %v", err,
 			)
@@ -535,7 +540,7 @@ func Solve(model optim.Model) (optim.Solution, GurobiSolver, error) {
 	sol, err := solver.Optimize()
 	if err != nil {
 		return optim.Solution{},
-			*solver,
+			solver,
 			fmt.Errorf(
 				"there was an issue with optimizing the model: %v",
 				err,
@@ -543,7 +548,7 @@ func Solve(model optim.Model) (optim.Solution, GurobiSolver, error) {
 	}
 
 	// Return final solution
-	return sol, *solver, err
+	return sol, solver, err
 
 }
 
@@ -576,12 +581,14 @@ func (gs *GurobiSolver) ToGurobiLinearConstraint(constr optim.ScalarConstraint) 
 			// Locate the gurobi variable in the current model that has matching ID
 			for jj, tempGurobiVar := range gs.CurrentModel.Variables {
 				if tempGurobiIdx == tempGurobiVar.Index {
-					tempVarSlice[GoopIdx] = &gs.CurrentModel.Variables[jj]
+					tempVarSlice[GoopIdx] = &(gs.CurrentModel.Variables[jj])
 					newL[GoopIdx] = left.L.AtVec(GoopIdx)
 				}
 			}
 		}
 
+		fmt.Printf("tempVarSlice = %v\n", tempVarSlice)
+		fmt.Printf("L: %v\n", left.L)
 		fmt.Printf(" POST tempVarSlice[0].ID: %v\n", tempVarSlice[0].Index)
 
 		// Return
